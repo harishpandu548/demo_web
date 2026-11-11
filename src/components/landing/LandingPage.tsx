@@ -1,13 +1,23 @@
 import Navbar from "./Navbar";
-import HeroSection from "./HeroSection";
+import DragExploreHero from "@/components/explore/DragExploreHero";
 import Footer from "./Footer";
 
-export default function LandingPage() {
+interface LandingPageProps {
+  hero: {
+    framesRef: React.RefObject<(HTMLImageElement | null)[]>;
+    isFrameReady: (index: number) => boolean;
+    totalFrames: number;
+    firstFrameReady: boolean;
+    firstFrameFailed: boolean;
+  };
+}
+
+export default function LandingPage({ hero }: LandingPageProps) {
   return (
     <div className="relative flex min-h-screen flex-col bg-ivory">
       <Navbar />
       <main className="flex-1">
-        <HeroSection />
+        <DragExploreHero {...hero} />
       </main>
       <Footer />
     </div>

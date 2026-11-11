@@ -12,11 +12,14 @@ interface UseImageSequenceResult {
   isFrameReady: (index: number) => boolean;
   firstFrameReady: boolean;
   firstFrameFailed: boolean;
+  /** Reactive, rAF-throttled count of frames loaded so far — drives a progress UI. */
+  loadedCount: number;
+  totalCount: number;
 }
 
 /**
  * Loads a sequence of images for canvas playback without ever mounting them
- * in the DOM. Frame 0 is fetched and decoded first so the preloader can paint
+ * in the DOM. Frame 0 is fetched and decoded first so the UI can paint
  * immediately; the rest load progressively behind a small worker pool so the
  * browser isn't asked to fetch hundreds of files at once.
  */
@@ -30,6 +33,7 @@ export function useImageSequence({
   const readyRef = useRef<boolean[]>(new Array(framePaths.length).fill(false));
   const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [firstFrameFailed, setFirstFrameFailed] = useState(false);
+  const [loadedCount, setLoadedCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,6 +41,21 @@ export function useImageSequence({
 
     framesRef.current = new Array(framePaths.length).fill(null);
     readyRef.current = new Array(framePaths.length).fill(false);
+
+    // Loads finish in rapid bursts; batch them into one state update per
+    // animation frame instead of re-rendering on every single completion.
+    let completedSinceFlush = 0;
+    let flushScheduled = false;
+    function scheduleFlush() {
+      if (flushScheduled) return;
+      flushScheduled = true;
+      requestAnimationFrame(() => {
+        flushScheduled = false;
+        if (cancelled) return;
+        setLoadedCount((count) => count + completedSinceFlush);
+        completedSinceFlush = 0;
+      });
+    }
 
     function loadOne(index: number): Promise<void> {
       return new Promise((resolve) => {
@@ -57,11 +76,15 @@ export function useImageSequence({
           framesRef.current[index] = img;
           readyRef.current[index] = true;
           if (index === 0) setFirstFrameReady(true);
+          completedSinceFlush += 1;
+          scheduleFlush();
           resolve();
         };
 
         img.onerror = () => {
           if (index === 0) setFirstFrameFailed(true);
+          completedSinceFlush += 1;
+          scheduleFlush();
           resolve();
         };
 
@@ -104,5 +127,12 @@ export function useImageSequence({
     return readyRef.current[index] === true;
   }
 
-  return { framesRef, isFrameReady, firstFrameReady, firstFrameFailed };
+  return {
+    framesRef,
+    isFrameReady,
+    firstFrameReady,
+    firstFrameFailed,
+    loadedCount,
+    totalCount: framePaths.length,
+  };
 }

@@ -19,4 +19,17 @@
 body {
   background: var(--color-ivory);
   color: var(--color-charcoal);
+  cursor: url("/images/logo/ossagi-cursor-32.png") 16 16, auto;
+}
+
+@keyframes ossagi-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[ossagi-spin_6s_linear_infinite\] {
+    animation: none;
+  }
 }
