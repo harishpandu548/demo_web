@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface UseDragScrubOptions {
   totalFrames: number;
   /** Horizontal pixels of drag distance per frame advanced. */
   pixelsPerFrame?: number;
+  /** Per-frame catch-up rate of the displayed index toward the drag target (0-1). Lower = more trailing lag. */
+  smoothing?: number;
 }
 
 interface DragState {
@@ -24,20 +26,47 @@ function clamp(value: number, min: number, max: number) {
 const AXIS_LOCK_THRESHOLD_PX = 6;
 
 /**
- * Maps horizontal pointer drag distance directly onto a frame index — drag
- * left and the sequence advances the same way the content would slide under
- * your finger (matches a standard carousel/map-drag), drag right and it runs
+ * Maps horizontal pointer drag distance onto a frame index — drag left and
+ * the sequence advances the same way the content would slide under your
+ * finger (matches a standard carousel/map-drag), drag right and it runs
  * back. Vertical gestures are handed back to the browser untouched so page
  * scroll on touch devices keeps working.
+ *
+ * The raw drag math lands on `targetIndexRef` instantly; the index actually
+ * displayed glides toward it every animation frame instead of jumping there,
+ * so quick or jittery mouse movement reads as a smooth glide rather than a
+ * rigid 1:1 stepper.
  */
 export function useDragScrub({
   totalFrames,
   pixelsPerFrame = 8,
+  smoothing = 0.2,
 }: UseDragScrubOptions) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<DragState | null>(null);
+  const targetIndexRef = useRef(0);
+  const displayIndexRef = useRef(0);
+
+  useEffect(() => {
+    let rafId = 0;
+
+    function tick() {
+      const current = displayIndexRef.current;
+      const target = targetIndexRef.current;
+      const next = current + (target - current) * smoothing;
+      displayIndexRef.current = next;
+
+      const rounded = Math.round(next);
+      setFrameIndex((prev) => (prev === rounded ? prev : rounded));
+
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(rafId);
+  }, [smoothing]);
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
@@ -46,11 +75,11 @@ export function useDragScrub({
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
-        startIndex: frameIndex,
+        startIndex: targetIndexRef.current,
         axisLocked: null,
       };
     },
-    [frameIndex],
+    [],
   );
 
   const onPointerMove = useCallback(
@@ -81,7 +110,11 @@ export function useDragScrub({
 
       event.preventDefault();
       const frameDelta = Math.round(-deltaX / pixelsPerFrame);
-      setFrameIndex(clamp(drag.startIndex + frameDelta, 0, totalFrames - 1));
+      targetIndexRef.current = clamp(
+        drag.startIndex + frameDelta,
+        0,
+        totalFrames - 1,
+      );
     },
     [pixelsPerFrame, totalFrames],
   );
@@ -97,17 +130,17 @@ export function useDragScrub({
     (event: React.KeyboardEvent<HTMLElement>) => {
       const step = event.shiftKey ? 10 : 1;
       let next: number | null = null;
-      if (event.key === "ArrowLeft") next = frameIndex - step;
-      else if (event.key === "ArrowRight") next = frameIndex + step;
+      if (event.key === "ArrowLeft") next = targetIndexRef.current - step;
+      else if (event.key === "ArrowRight") next = targetIndexRef.current + step;
       else if (event.key === "Home") next = 0;
       else if (event.key === "End") next = totalFrames - 1;
       if (next == null) return;
 
       event.preventDefault();
       setHasInteracted(true);
-      setFrameIndex(clamp(next, 0, totalFrames - 1));
+      targetIndexRef.current = clamp(next, 0, totalFrames - 1);
     },
-    [frameIndex, totalFrames],
+    [totalFrames],
   );
 
   const handlers = useMemo(

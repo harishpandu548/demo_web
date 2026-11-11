@@ -8,7 +8,6 @@ import FrameCanvas from "./FrameCanvas";
 // canvas so there's never a blank layer while the sequence loads or if it
 // fails outright.
 const FALLBACK_HERO_SRC = "/images/hero/hero-image.jpg";
-const CURSOR_URL = "/images/logo/ossagi-cursor-32.png";
 
 interface DragExploreHeroProps {
   framesRef: React.RefObject<(HTMLImageElement | null)[]>;
@@ -25,18 +24,13 @@ export default function DragExploreHero({
   firstFrameReady,
   firstFrameFailed,
 }: DragExploreHeroProps) {
-  const { frameIndex, hasInteracted, isDragging, handlers } = useDragScrub({
+  const { frameIndex, hasInteracted, handlers } = useDragScrub({
     totalFrames,
   });
 
   return (
     <section
       className="relative flex h-dvh touch-pan-y select-none overflow-hidden"
-      style={{
-        cursor: isDragging
-          ? "grabbing"
-          : `url(${CURSOR_URL}) 16 16, grab`,
-      }}
       role="slider"
       aria-label="Drag to experience the OSSAGI boutique"
       aria-valuemin={1}

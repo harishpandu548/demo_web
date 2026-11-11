@@ -16,10 +16,22 @@
   --font-sans: var(--font-jost);
 }
 
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background: var(--color-ivory);
   color: var(--color-charcoal);
-  cursor: url("/images/logo/ossagi-cursor-32.png") 16 16, auto;
+}
+
+/* The native cursor is only hidden once CustomCursor confirms a fine
+   (mouse/trackpad) pointer is present, so touch devices are unaffected. */
+html.custom-cursor-active,
+html.custom-cursor-active * {
+  cursor: none !important;
 }
 
 @keyframes ossagi-spin {

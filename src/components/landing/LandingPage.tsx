@@ -1,6 +1,5 @@
 import Navbar from "./Navbar";
 import DragExploreHero from "@/components/explore/DragExploreHero";
-import Footer from "./Footer";
 
 interface LandingPageProps {
   hero: {
@@ -14,12 +13,9 @@ interface LandingPageProps {
 
 export default function LandingPage({ hero }: LandingPageProps) {
   return (
-    <div className="relative flex min-h-screen flex-col bg-ivory">
+    <div className="relative h-dvh overflow-hidden bg-ivory">
       <Navbar />
-      <main className="flex-1">
-        <DragExploreHero {...hero} />
-      </main>
-      <Footer />
+      <DragExploreHero {...hero} />
     </div>
   );
 }

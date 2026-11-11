@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Jost, Playfair_Display } from "next/font/google";
+import CustomCursor from "@/components/cursor/CustomCursor";
 import "./globals.css";
 
 const playfairDisplay = Playfair_Display({
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${playfairDisplay.variable} ${jost.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-ivory font-sans text-charcoal">
+        <CustomCursor />
         {children}
       </body>
     </html>
